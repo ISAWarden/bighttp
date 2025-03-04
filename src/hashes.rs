@@ -4,6 +4,7 @@ use blake3::Hasher;
 use parking_lot::Mutex;
 use rand::{thread_rng, Rng, RngCore};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+#[cfg(feature = "client")]
 use reqwest::{Client, StatusCode};
 use std::{
     fs::File,
@@ -40,6 +41,7 @@ impl<const HASH_SIZE: usize> BigHTTPHashes<HASH_SIZE> {
         }
     }
 
+    #[cfg(feature = "client")]
     pub async fn from_url(url: &Url) -> Result<Self> {
         let client = Client::new();
 
