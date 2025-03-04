@@ -38,7 +38,7 @@ impl<const HASH_SIZE: usize> BigHttpClient<HASH_SIZE> {
                 remote_hashes.hashes.len(),
             );
             if let Some(tx) = &progress_tx {
-                tx.send(100).await?;
+                tx.send(local_hashes.file_size_bytes()).await?;
             }
             return Ok(());
         }
