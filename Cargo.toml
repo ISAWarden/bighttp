@@ -1,0 +1,39 @@
+[package]
+name = "bighttp"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "bighttp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bighttp"
+path = "src/bin.rs"
+
+[dependencies]
+anyhow = "1.0.93"
+blake3 = "1.5.4"
+clap = { version = "4.5.21", features = ["derive"] }
+reqwest = { version = "0.12.9", features = ["stream"] }
+url = "2.5.4"
+tokio = { version = "1.41.1", features = [
+  "rt-multi-thread",
+  "rt",
+  "macros",
+  "sync",
+] }
+futures-util = "0.3.31"
+rayon = "1.10.0"
+parking_lot = "0.12.3"
+bitcode = "0.6.5"
+rand = "0.8.5"
+
+[dev-dependencies]
+hex-literal = "0.4.1"
+wiremock = "0.6.2"
+tempfile = "3.14.0"
+rand = "0.8.5"
+rand_chacha = "0.3.1"
+hex = "0.4.3"
+port-selector = "0.1.6"
