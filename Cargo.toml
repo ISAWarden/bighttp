@@ -11,6 +11,9 @@ path = "src/lib.rs"
 name = "bighttp"
 path = "src/bin.rs"
 
+[features]
+vendored_tls = ["reqwest/native-tls-vendored"]
+
 [dependencies]
 anyhow = "1.0.93"
 blake3 = "1.5.4"
