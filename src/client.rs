@@ -2,6 +2,7 @@ use crate::hashes::BigHTTPHashes;
 use anyhow::Result;
 use reqwest::Client;
 use std::fs::OpenOptions;
+use std::io::Write;
 use std::os::unix::fs::FileExt;
 use std::path::PathBuf;
 use tokio::sync::mpsc;
@@ -32,11 +33,6 @@ impl<const HASH_SIZE: usize> BigHttpClient<HASH_SIZE> {
         };
 
         if local_hashes == *remote_hashes {
-            println!(
-                "Remote data of {} (hashes len: {}) is identical, not doing anything",
-                output_file.display(),
-                remote_hashes.hashes.len(),
-            );
             if let Some(tx) = &progress_tx {
                 tx.send(local_hashes.file_size_bytes()).await?;
             }
@@ -44,13 +40,12 @@ impl<const HASH_SIZE: usize> BigHttpClient<HASH_SIZE> {
         }
 
         // Compare each chunk and download the differing chunks
-        let file = OpenOptions::new()
+        let mut file = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
             .truncate(false)
             .open(output_file)?;
-        let mut total_downloaded = 0;
         let client = Client::new();
         let chunk_size = remote_hashes.chunk_size;
         for (i, (local_hash, remote_hash)) in local_hashes
@@ -71,11 +66,11 @@ impl<const HASH_SIZE: usize> BigHttpClient<HASH_SIZE> {
                     .await?;
                 let chunk = response.bytes().await?;
                 file.write_all_at(&chunk, start as u64)?;
+                file.flush()?;
 
-                total_downloaded += chunk.len();
                 if let Some(tx) = &progress_tx {
                     if !tx.is_closed() {
-                        tx.send(total_downloaded).await?;
+                        tx.send(end + 1).await?;
                     }
                 }
             }
