@@ -13,12 +13,13 @@ path = "src/bin.rs"
 
 [features]
 vendored_tls = ["reqwest/native-tls-vendored"]
+client = ["reqwest"]
 
 [dependencies]
 anyhow = "1.0.93"
 blake3 = "1.5.4"
 clap = { version = "4.5.21", features = ["derive"] }
-reqwest = { version = "0.12.9", features = ["stream"] }
+reqwest = { version = "0.12.9", features = ["stream"], optional = true }
 url = "2.5.4"
 tokio = { version = "1.41.1", features = [
   "rt-multi-thread",

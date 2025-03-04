@@ -1,6 +1,6 @@
-mod bighttp_hashes;
+mod hashes;
 use anyhow::Result;
-use bighttp::bighttp_hashes::BigHTTPHashes;
+use bighttp::hashes::BigHTTPHashes;
 use clap::Parser;
 use std::{fs::File, io::Write, path::PathBuf};
 

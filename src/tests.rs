@@ -1,5 +1,5 @@
-use crate::bighttp_hashes::BigHTTPHashes;
-use crate::BigHttpClient;
+use crate::client::BigHttpClient;
+use crate::hashes::BigHTTPHashes;
 use anyhow::{anyhow, Result};
 use hex_literal::hex;
 use port_selector::random_free_port;
