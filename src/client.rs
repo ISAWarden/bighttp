@@ -26,6 +26,7 @@ impl<const HASH_SIZE: usize> BigHttpClient<HASH_SIZE> {
             if remote_hashes.file_size_bytes() == lh.file_size_bytes() {
                 lh
             } else {
+                std::fs::remove_file(&output_file)?;
                 BigHTTPHashes::noised(remote_hashes.chunk_size, remote_hashes.file_size_bytes())
             }
         } else {

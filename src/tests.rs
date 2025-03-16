@@ -6,6 +6,8 @@ use port_selector::random_free_port;
 use rand::{Rng, RngCore, SeedableRng};
 use reqwest::Client;
 use std::fs::File;
+use std::fs::OpenOptions;
+use std::io;
 use std::io::Read;
 use std::io::Write;
 use std::path::PathBuf;
@@ -15,6 +17,22 @@ use std::time::Duration;
 use tempfile::tempdir;
 use tokio::time::sleep;
 use url::Url;
+
+fn append_random_bytes(file_path: &PathBuf) -> io::Result<()> {
+    let mut rng = rand::thread_rng();
+    // Generate a random number of bytes to append (e.g., between 1 and 1024)
+    let num_bytes: usize = rng.gen_range(1..=1024);
+    let random_bytes: Vec<u8> = (0..num_bytes).map(|_| rng.gen()).collect();
+
+    let mut file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(file_path)?;
+
+    file.write_all(&random_bytes)?;
+
+    Ok(())
+}
 
 fn random_modify_bytes<R: Rng>(path: &PathBuf, rng: &mut R) -> Result<()> {
     // Read the file content into a Vec<u8>
@@ -84,7 +102,7 @@ async fn test_update_file() -> Result<()> {
     let file_path_out = temp_dir.path().join("test-file-out.bin");
     let mut file = File::create(&file_path)?;
     let mut bytes = vec![0u8; 1024];
-    for _ in 0..4095 {
+    for _ in 0..1024 * 1024 {
         seeded_rng.fill_bytes(&mut bytes);
         file.write_all(&bytes).unwrap();
     }
@@ -146,8 +164,16 @@ async fn test_update_file() -> Result<()> {
     assert!(std::fs::read(&file_path).unwrap() != std::fs::read(&file_path_out).unwrap());
 
     // Call the update_file method
+    let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+    tokio::spawn(async move {
+        loop {
+            if let Some(size) = rx.recv().await {
+                println!("Download update: {}", size);
+            }
+        }
+    });
     big_http
-        .update_file(&remote_hashes, &mock_file_url, &file_path_out, None)
+        .update_file(&remote_hashes, &mock_file_url, &file_path_out, Some(tx))
         .await?;
 
     // Verify the file content
@@ -155,7 +181,50 @@ async fn test_update_file() -> Result<()> {
         File::open(&file_path)?.metadata()?.len(),
         File::open(&file_path_out)?.metadata()?.len()
     );
-    assert!(std::fs::read(file_path).unwrap() == std::fs::read(file_path_out).unwrap());
+    assert!(std::fs::read(&file_path).unwrap() == std::fs::read(&file_path_out).unwrap());
+
+    println!("Update after changing nothing!");
+    let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+    tokio::spawn(async move {
+        loop {
+            if let Some(..) = rx.recv().await {
+                panic!("Should never show progress on a finished file!");
+            }
+        }
+    });
+    big_http
+        .update_file(&remote_hashes, &mock_file_url, &file_path_out, Some(tx))
+        .await?;
+
+    // Verify the file content
+    assert_eq!(
+        File::open(&file_path)?.metadata()?.len(),
+        File::open(&file_path_out)?.metadata()?.len()
+    );
+    assert!(std::fs::read(&file_path).unwrap() == std::fs::read(&file_path_out).unwrap());
+
+    println!("Update after adding random bytes (Making original file bigger)");
+    append_random_bytes(&file_path_out).unwrap();
+
+    let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+    tokio::spawn(async move {
+        loop {
+            if let Some(size) = rx.recv().await {
+                println!("Update after adding random bytes: {}", size);
+            }
+        }
+    });
+    big_http
+        .update_file(&remote_hashes, &mock_file_url, &file_path_out, Some(tx))
+        .await?;
+
+    // Verify the file content
+    assert_eq!(
+        File::open(&file_path)?.metadata()?.len(),
+        File::open(&file_path_out)?.metadata()?.len()
+    );
+    assert!(std::fs::read(&file_path).unwrap() == std::fs::read(&file_path_out).unwrap());
+
     temp_dir.close().unwrap();
     caddy_server.kill().unwrap();
     Ok(())
