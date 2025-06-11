@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use bitcode::{Decode, Encode};
 use blake3::Hasher;
 use parking_lot::Mutex;
-use rand::{thread_rng, Rng, RngCore};
+use rand::{thread_rng, RngCore};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 #[cfg(feature = "client")]
 use reqwest::{Client, StatusCode};
@@ -11,7 +11,6 @@ use std::{
     io::{Read, Seek, SeekFrom},
     path::PathBuf,
     sync::Arc,
-    usize,
 };
 use url::Url;
 

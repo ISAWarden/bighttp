@@ -2,8 +2,7 @@ use crate::hashes::BigHTTPHashes;
 use anyhow::Result;
 use reqwest::Client;
 use std::fs::OpenOptions;
-use std::io::Write;
-use std::os::unix::fs::FileExt;
+use std::io::{Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use tokio::sync::mpsc;
 use url::Url;
@@ -26,7 +25,7 @@ impl<const HASH_SIZE: usize> BigHttpClient<HASH_SIZE> {
             if remote_hashes.file_size_bytes() == lh.file_size_bytes() {
                 lh
             } else {
-                std::fs::remove_file(&output_file)?;
+                std::fs::remove_file(output_file)?;
                 BigHTTPHashes::noised(remote_hashes.chunk_size, remote_hashes.file_size_bytes())
             }
         } else {
@@ -66,7 +65,10 @@ impl<const HASH_SIZE: usize> BigHttpClient<HASH_SIZE> {
                     .send()
                     .await?;
                 let chunk = response.bytes().await?;
-                file.write_all_at(&chunk, start as u64)?;
+
+                // Cross-platform alternative to write_all_at
+                file.seek(SeekFrom::Start(start as u64))?;
+                file.write_all(&chunk)?;
                 file.flush()?;
 
                 if let Some(tx) = &progress_tx {

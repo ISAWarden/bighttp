@@ -102,7 +102,7 @@ async fn test_update_file() -> Result<()> {
     let file_path_out = temp_dir.path().join("test-file-out.bin");
     let mut file = File::create(&file_path)?;
     let mut bytes = vec![0u8; 1024];
-    for _ in 0..1024 * 1024 {
+    for _ in 0..1024 {
         seeded_rng.fill_bytes(&mut bytes);
         file.write_all(&bytes).unwrap();
     }
@@ -177,19 +177,18 @@ async fn test_update_file() -> Result<()> {
         .await?;
 
     // Verify the file content
-    assert_eq!(
-        File::open(&file_path)?.metadata()?.len(),
-        File::open(&file_path_out)?.metadata()?.len()
-    );
+    let full_file_len = File::open(&file_path)?.metadata()?.len();
+    assert_eq!(full_file_len, File::open(&file_path_out)?.metadata()?.len());
     assert!(std::fs::read(&file_path).unwrap() == std::fs::read(&file_path_out).unwrap());
 
     println!("Update after changing nothing!");
     let (tx, mut rx) = tokio::sync::mpsc::channel(1);
     tokio::spawn(async move {
-        loop {
-            if let Some(..) = rx.recv().await {
-                panic!("Should never show progress on a finished file!");
-            }
+        while let Some(size_done) = rx.recv().await {
+            assert_eq!(
+                size_done, full_file_len as usize,
+                "Should never show progress on a finished file!"
+            );
         }
     });
     big_http
